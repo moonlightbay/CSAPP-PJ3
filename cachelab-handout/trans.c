@@ -22,6 +22,56 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    //case1:M=N=32,此时A矩阵每行需要4个cache行，意味着可以存8行
+    if (M == 32 && N == 32){
+        int i, j, k;     //循环所需变量
+        int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7;   //临时变量
+        for (i = 0; i < N; i += 8){           //8*8分块处理
+            for (j = 0; j < M; j += 8){
+                for (k = i; k < i + 8; k++){
+                    temp0 = A[k][j];
+                    temp1 = A[k][j + 1];
+                    temp2 = A[k][j + 2];
+                    temp3 = A[k][j + 3];
+                    temp4 = A[k][j + 4];
+                    temp5 = A[k][j + 5];
+                    temp6 = A[k][j + 6];
+                    temp7 = A[k][j + 7];
+                    B[j][k] = temp0;
+                    B[j + 1][k] = temp1;
+                    B[j + 2][k] = temp2;
+                    B[j + 3][k] = temp3;
+                    B[j + 4][k] = temp4;
+                    B[j + 5][k] = temp5;
+                    B[j + 6][k] = temp6;
+                    B[j + 7][k] = temp7;
+                }
+            }
+        }
+    }
+    //case2:M=N=64,此时A矩阵每行需要8个cache行，意味着只能存4行
+    if (M == 32 && N == 32){
+        int i,j,k,l;
+        int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7;   //临时变量
+        for (i = 0; i < N; i += 8){     
+            for(j = 0; j < M; j +=8 ){
+                for(k = i; k < i + 4; k++){   //4*4分块,局部转置
+
+
+
+
+                }
+
+
+
+            }
+        }
+     
+
+    }
+
+  
+
 }
 
 /* 
