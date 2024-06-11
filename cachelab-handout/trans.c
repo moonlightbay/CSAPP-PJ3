@@ -50,28 +50,84 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
         }
     }
     //case2:M=N=64,此时A矩阵每行需要8个cache行，意味着只能存4行
-    if (M == 32 && N == 32){
-        int i,j,k,l;
-        int temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7;   //临时变量
-        for (i = 0; i < N; i += 8){     
-            for(j = 0; j < M; j +=8 ){
-                for(k = i; k < i + 4; k++){   //4*4分块,局部转置
-
-
-
-
+    else if (M == 64 && N == 64)
+    {
+        int i, j, k, l;
+        int temp1, temp2, temp3, temp4, temp5, temp6, temp7, temp8;
+        for (i = 0; i < N; i += 8)
+            for (j = 0; j < M; j += 8)               //8*8分块，然后分成4个4*4小块
+            {
+                for (k = i; k < i + 4; ++k)          //读四行4*8,转置一个4*4（左上）,转置暂存一个4*4，以全部利用读取的 cache 行
+                {
+                    temp1 = A[k][j]; temp2 = A[k][j+1]; temp3 = A[k][j+2]; temp4 = A[k][j+3];
+                    temp5 = A[k][j+4]; temp6 = A[k][j+5]; temp7 = A[k][j+6]; temp8 = A[k][j+7];
+                    
+                    B[j][k] = temp1; B[j+1][k] = temp2; B[j+2][k] = temp3; B[j+3][k] = temp4;
+                    B[j][k+4] = temp5; B[j+1][k+4] = temp6; B[j+2][k+4] = temp7; B[j+3][k+4] = temp8;
                 }
 
-
-
+                for (l = j; l < j + 4; ++l)          //转移一个4*4（到左下），转置一个4*4（到右上）
+                {
+                    temp1 = A[i+4][l]; temp2 = A[i+5][l]; temp3 = A[i+6][l]; temp4 = A[i+7][l];
+                    temp5 = B[l][i+4]; temp6 = B[l][i+5]; temp7 = B[l][i+6]; temp8 = B[l][i+7];
+                    
+                    B[l][i+4] = temp1; B[l][i+5] = temp2; B[l][i+6] = temp3; B[l][i+7] = temp4;
+                    B[l+4][i] = temp5; B[l+4][i+1] = temp6; B[l+4][i+2] = temp7; B[l+4][i+3] = temp8;
+                }
+                for (k = i + 4; k < i + 8; ++k)    //转置一个4*4（右下）
+                {
+                    temp1 = A[k][j+4]; temp2 = A[k][j+5]; temp3 = A[k][j+6]; temp4 = A[k][j+7];
+                    B[j+4][k] = temp1; B[j+5][k] = temp2; B[j+6][k] = temp3; B[j+7][k] = temp4;
+                }
             }
-        }
-     
-
     }
-
-  
-
+    
+    //case3：M=61,N=67
+    else if(M == 61 && N == 67)
+    {
+        int i, j, temp0, temp1, temp2, temp3, temp4, temp5, temp6, temp7;
+        int k = N / 8 * 8;               //余下的列数为5
+        int l = M / 8 * 8;               //余下的行数为3
+        for (j = 0; j < l; j += 8)       //8*8分块，转置所有完整的8*8块
+            for (i = 0; i < k; ++i)
+            {
+                temp0 = A[i][j];
+                temp1 = A[i][j+1];
+                temp2 = A[i][j+2];
+                temp3 = A[i][j+3];
+                temp4 = A[i][j+4];
+                temp5 = A[i][j+5];
+                temp6 = A[i][j+6];
+                temp7 = A[i][j+7];
+                
+                B[j][i] = temp0;
+                B[j+1][i] = temp1;
+                B[j+2][i] = temp2;
+                B[j+3][i] = temp3;
+                B[j+4][i] = temp4;
+                B[j+5][i] = temp5;
+                B[j+6][i] = temp6;
+                B[j+7][i] = temp7;
+            }
+        for (i = k; i < N; ++i)       //转置剩余的不完整的8*8块(右下角)
+            for (j = l; j < M; ++j)
+            {
+                temp0 = A[i][j];
+                B[j][i] = temp0;
+            }
+        for (i = 0; i < N; ++i)      //转置剩余的不完整的8*8块(右方)
+            for (j = l; j < M; ++j)
+            {
+                temp0 = A[i][j];
+                B[j][i] = temp0;
+            }
+        for (i = k; i < N; ++i)       //转置剩余的不完整的8*8块(下方)
+            for (j = 0; j < M; ++j)
+            {
+                temp0 = A[i][j];
+                B[j][i] = temp0;
+            }
+    }
 }
 
 /* 
